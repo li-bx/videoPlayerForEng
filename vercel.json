@@ -2,14 +2,14 @@
     "version": 2,
     "builds": [
         {
-            "src": "videoPlayerForEng.html",
+            "src": "learnEng.html",
             "use": "@vercel/static"
         }
     ],
     "routes": [
         {
             "src": "/",
-            "dest": "/videoPlayerForEng.html"
+            "dest": "/learnEng.html"
         }
     ]
 }
