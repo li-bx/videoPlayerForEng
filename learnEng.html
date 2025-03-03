@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player</title>
+    <style>
+        /* Base styles */
+        .video-player-container {
+            width: 100%;
+            height: 100vh;
+            background-color: #f5f7fa;
+        }
+
+        .main-content {
+            padding: 20px;
+        }
+
+        .player-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .player-column {
+            flex: 3;
+            min-width: 300px;
+        }
+
+        .playlist-column {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        /* Video player styles */
+        .video-card {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+        }
+
+        .video-section {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background-color: #000;
+        }
+
+        .video-player {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Progress bar styles */
+        .progress-bar-container {
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+
+        .progress-bar {
+            position: relative;
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            cursor: pointer;
+        }
+
+        .progress-current {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #409EFF;
+            transition: width 0.1s linear;
+        }
+
+        /* Controls styles */
+        .player-controls {
+            padding: 12px 16px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #ebeef5;
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            gap: 16px;
+            align-items: center;
+            padding: 8px;
+        }
+
+        /* Button styles */
+        .el-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 15px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            color: #606266;
+            transition: all 0.3s;
+        }
+
+        .el-button:hover {
+            background: #ecf5ff;
+            border-color: #c6e2ff;
+            color: #409EFF;
+        }
+
+        /* A-B markers */
+        .point-marker {
+            position: absolute;
+            top: -8px;
+            width: 8px;
+            height: 24px;
+            background-color: #1890ff;
+            z-index: 10;
+            cursor: grab;
+            border-radius: 3px;
+            user-select: none;
+            transform: translateX(-50%);
+        }
+
+        .point-marker:active {
+            cursor: grabbing;
+        }
+
+        .point-a {
+            background-color: #52c41a;
+        }
+
+        .point-b {
+            background-color: #f5222d;
+        }
+
+        .ab-range {
+            position: absolute;
+            height: 100%;
+            background-color: rgba(64, 158, 255, 0.4);
+            z-index: 2;
+        }
+
+        /* Playlist styles */
+        .playlist-content {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ebeef5;
+            margin: 10px 0;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none;
+        }
+
+        /* Playlist styles */
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ebeef5;
+            gap: 8px;
+        }
+
+        .playlist-number {
+            min-width: 30px;
+            color: #909399;
+        }
+
+        .playlist-url {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #606266;
+        }
+
+        .playlist-play-btn,
+        .playlist-remove-btn {
+            padding: 4px 8px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .playlist-play-btn:hover {
+            color: #409EFF;
+            border-color: #409EFF;
+        }
+
+        .playlist-remove-btn:hover {
+            color: #f56c6c;
+            border-color: #f56c6c;
+        }
+
+        .playlist-actions-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .time-indicators {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            color: #606266;
+            font-size: 12px;
+        }
+
+        #currentTime {
+            float: left;
+        }
+
+        #duration {
+            float: right;
+        }
+
+        .point-time {
+            margin: 0 10px;
+            font-size: 14px;
+            color: #606266;
+            cursor: ew-resize;
+            user-select: none;
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .point-time:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .point-time:active {
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        /* Improved control styles */
+        .ab-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .volume-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .speed-group {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Disabled state styles */
+        .el-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background-color: #f5f7fa;
+        }
+
+        .el-button:disabled:hover {
+            background-color: #f5f7fa;
+            border-color: #dcdfe6;
+        }
+
+        input[type="range"]:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        select:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background-color: #f5f7fa;
+        }
+
+        .ab-switch {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Add these new icon styles */
+        .player-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            margin-right: 4px;
+        }
+
+        .player-icon svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-player-container">
+        <main class="main-content">
+            英语学习A-B复读工具（ai生成工具）
+            <div class="player-row">
+                <!-- Video Player Section -->
+                <div class="player-column">
+                    <div class="video-card">
+                        <div class="video-section">
+                            <video id="videoPlayer" class="video-player" preload="auto" crossorigin="anonymous"
+                                controlsList="nodownload">
+                            </video>
+
+                            <!-- Play/pause overlay -->
+                            <div id="videoPlayOverlay" class="video-play-overlay">
+                                <div id="playIcon" class="play-icon hidden">
+                                    <i class="play-button">▶</i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress bar -->
+                        <div class="progress-bar-container">
+                            <div id="progressBar" class="progress-bar">
+                                <div class="progress-background"></div>
+                                <div id="progressCurrent" class="progress-current"></div>
+                                <div id="pointA" class="point-marker point-a hidden"></div>
+                                <div id="pointB" class="point-marker point-b hidden"></div>
+                                <div id="abRange" class="ab-range hidden"></div>
+                            </div>
+
+                            <!-- Time indicators -->
+                            <div class="time-indicators">
+                                <span id="currentTime">00:00</span>
+                                <span id="duration">00:00</span>
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="player-controls">
+                            <div class="control-buttons">
+                                <!-- Play/Pause button -->
+                                <button id="playPauseBtn" class="el-button" disabled>
+                                    <span class="player-icon">
+                                        <svg class="play-icon" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                    </span>
+                                    <span>播放</span>
+                                </button>
+
+                                <!-- A-B controls -->
+                                <div class="ab-controls">
+                                    <button id="pointABtn" class="el-button" disabled>A</button>
+                                    <span id="pointATime" class="point-time">00:00</span>
+                                    <button id="pointBBtn" class="el-button" disabled>B</button>
+                                    <span id="pointBTime" class="point-time">00:00</span>
+                                    <button id="clearABBtn" class="el-button" disabled>清除</button>
+                                    <label class="ab-switch">
+                                        <input type="checkbox" id="abRepeatToggle" disabled>
+                                        <span>循环</span>
+                                    </label>
+                                </div>
+
+                                <!-- Volume and Speed controls -->
+                                <div class="playback-controls">
+                                    <div class="volume-group">
+                                        <button id="muteBtn" class="el-button" disabled>🔊</button>
+                                        <input type="range" id="volumeSlider" min="0" max="100" value="100" disabled>
+                                    </div>
+                                    <div class="speed-group">
+                                        <select id="playbackSpeed" disabled>
+                                            <option value="0.25">0.25x</option>
+                                            <option value="0.5">0.5x</option>
+                                            <option value="0.75">0.75x</option>
+                                            <option value="1" selected>正常</option>
+                                            <option value="1.25">1.25x</option>
+                                            <option value="1.5">1.5x</option>
+                                            <option value="2">2x</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Fullscreen button -->
+                                <button id="fullscreenBtn" class="el-button" disabled>
+                                    <span>全屏</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Playlist Section -->
+                <div class="playlist-column">
+                    <div class="info-tabs">
+                        <div class="tab-content">
+                            <input type="text" id="videoUrl" placeholder="请输入MP4视频URL" class="url-input">
+                            <button id="loadVideoBtn" class="el-button">加载</button>
+                            
+                            <div class="playlist-content">
+                                <div id="playlistContainer"></div>
+                            </div>
+
+                            <div class="playlist-actions-bar">
+                                <button id="addToPlaylistBtn" class="el-button">添加到播放列表</button>
+                                <button id="clearPlaylistBtn" class="el-button">清空列表</button>
+                                <input type="file" id="localFileInput" accept="video/mp4" style="display: none;">
+                                <button id="localFileBtn" class="el-button">播放本地MP4文件</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 在文件顶部声明全局变量
+        let isDragging = false;
+        let currentDraggingPoint = null;
+        let pointATime = 0;
+        let pointBTime = 0;
+        let video = null;
+        let progressBar = null;
+
+        // 工具函数放在前面
+        const formatTime = (seconds) => {
+            const minutes = Math.floor(seconds / 60);
+            seconds = Math.floor(seconds % 60);
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        };
+
+        // 更新 AB 点时间显示
+        const updateABPoints = () => {
+            const pointATimeDisplay = document.getElementById('pointATime');
+            const pointBTimeDisplay = document.getElementById('pointBTime');
+            
+            if (pointATimeDisplay) {
+                pointATimeDisplay.textContent = formatTime(pointATime);
+            }
+            
+            if (pointBTimeDisplay) {
+                pointBTimeDisplay.textContent = formatTime(pointBTime);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 获取必要的 DOM 元素
+            video = document.querySelector('video');
+            progressBar = document.querySelector('.progress-bar');
+
+            if (!video || !progressBar) {
+                console.error('Required video or progress bar element not found');
+                return;
+            }
+
+            // Elements
+            const videoPlayer = document.getElementById('videoPlayer');
+            const progressCurrent = document.getElementById('progressCurrent');
+            const currentTimeDisplay = document.getElementById('currentTime');
+            const durationDisplay = document.getElementById('duration');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const pointABtn = document.getElementById('pointABtn');
+            const pointBBtn = document.getElementById('pointBBtn');
+            const clearABBtn = document.getElementById('clearABBtn');
+            const abRepeatToggle = document.getElementById('abRepeatToggle');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const muteBtn = document.getElementById('muteBtn');
+            const playbackSpeed = document.getElementById('playbackSpeed');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            const videoUrl = document.getElementById('videoUrl');
+            const loadVideoBtn = document.getElementById('loadVideoBtn');
+            const localFileBtn = document.getElementById('localFileBtn');
+            const localFileInput = document.getElementById('localFileInput');
+            const addToPlaylistBtn = document.getElementById('addToPlaylistBtn');
+            const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+            const playlistContainer = document.getElementById('playlistContainer');
+
+            // State
+            let pointA = null;
+            let pointB = null;
+            let isPlaying = false;
+            let playlist = [];
+
+            // 初始化时隐藏 AB 标记
+            const pointAMarker = document.getElementById('pointA');
+            const pointBMarker = document.getElementById('pointB');
+            const abRange = document.getElementById('abRange');
+
+            if (pointAMarker) pointAMarker.classList.add('hidden');
+            if (pointBMarker) pointBMarker.classList.add('hidden');
+            if (abRange) abRange.classList.add('hidden');
+
+            // 播放按钮点击事件
+            playPauseBtn.addEventListener('click', () => {
+                if (!video.src) {
+                    console.warn('No video source loaded');
+                    return;
+                }
+                
+                if (video.paused) {
+                    video.play()
+                        .then(() => {
+                            updatePlayPauseButton(true);
+                        })
+                        .catch(error => {
+                            console.error('播放失败:', error);
+                            playPauseBtn.disabled = true;
+                        });
+                } else {
+                    video.pause();
+                    updatePlayPauseButton(false);
+                }
+            });
+
+            // 监听视频播放状态变化
+            video.addEventListener('play', () => {
+                updatePlayPauseButton(true);
+            });
+
+            video.addEventListener('pause', () => {
+                updatePlayPauseButton(false);
+            });
+
+            // 修复 AB 点播放控制
+            let isABRepeatEnabled = false;
+
+            // 修改 A-B points 的处理
+            pointABtn.addEventListener('click', () => {
+                if (!video.duration) return;
+
+                pointATime = video.currentTime;
+                
+                // 显示 A 点标记
+                if (pointAMarker) {
+                    pointAMarker.style.left = `${(pointATime / video.duration) * 100}%`;
+                    pointAMarker.classList.remove('hidden');
+                }
+                
+                // 更新时间显示
+                const pointATimeSpan = document.getElementById('pointATime');
+                if (pointATimeSpan) {
+                    pointATimeSpan.textContent = formatTime(pointATime);
+                }
+
+                // 如果 B 点已设置，显示范围
+                if (pointBTime !== null && abRange) {
+                    updateABRange();
+                }
+            });
+
+            pointBBtn.addEventListener('click', () => {
+                if (!video.duration || pointATime === null) return;
+
+                const currentTime = video.currentTime;
+                if (currentTime > pointATime) {
+                    pointBTime = currentTime;
+                    
+                    // 显示 B 点标记
+                    if (pointBMarker) {
+                        pointBMarker.style.left = `${(pointBTime / video.duration) * 100}%`;
+                        pointBMarker.classList.remove('hidden');
+                    }
+                    
+                    // 更新时间显示
+                    const pointBTimeSpan = document.getElementById('pointBTime');
+                    if (pointBTimeSpan) {
+                        pointBTimeSpan.textContent = formatTime(pointBTime);
+                    }
+
+                    // 显示 AB 范围
+                    if (abRange) {
+                        updateABRange();
+                        abRange.classList.remove('hidden');
+                    }
+                }
+            });
+
+            // 修改 AB 重复播放的处理
+            abRepeatToggle.addEventListener('change', () => {
+                isABRepeatEnabled = abRepeatToggle.checked;
+            });
+
+            // 修改视频时间更新事件处理
+            video.addEventListener('timeupdate', () => {
+                const progress = (video.currentTime / video.duration) * 100;
+                progressCurrent.style.width = `${progress}%`;
+                currentTimeDisplay.textContent = formatTime(video.currentTime);
+
+                // 改进 A-B repeat 逻辑
+                if (isABRepeatEnabled && pointATime !== null && pointBTime !== null) {
+                    if (video.currentTime >= pointBTime) {
+                        video.currentTime = pointATime;
+                    } else if (video.currentTime < pointATime) {
+                        video.currentTime = pointATime;
+                    }
+                }
+            });
+
+            // 修改进度条点击事件，添加对 AB 点的处理
+            progressBar.addEventListener('click', (e) => {
+                const rect = progressBar.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                const newTime = pos * video.duration;
+
+                // 如果启用了 AB 循环，限制在 AB 范围内
+                if (isABRepeatEnabled && pointATime !== null && pointBTime !== null) {
+                    if (newTime >= pointATime && newTime <= pointBTime) {
+                        video.currentTime = newTime;
+                    } else if (newTime < pointATime) {
+                        video.currentTime = pointATime;
+                    } else if (newTime > pointBTime) {
+                        video.currentTime = pointBTime;
+                    }
+                } else {
+                    video.currentTime = newTime;
+                }
+            });
+
+            clearABBtn.addEventListener('click', () => {
+                pointATime = null;
+                pointBTime = null;
+                
+                // 重置时间显示
+                const pointATimeSpan = document.getElementById('pointATime');
+                const pointBTimeSpan = document.getElementById('pointBTime');
+                
+                if (pointATimeSpan) pointATimeSpan.textContent = '00:00';
+                if (pointBTimeSpan) pointBTimeSpan.textContent = '00:00';
+                
+                // 隐藏进度条标记
+                const pointAMarker = document.getElementById('pointA');
+                const pointBMarker = document.getElementById('pointB');
+                const abRange = document.getElementById('abRange');
+                
+                if (pointAMarker) pointAMarker.classList.add('hidden');
+                if (pointBMarker) pointBMarker.classList.add('hidden');
+                if (abRange) abRange.classList.add('hidden');
+                
+                console.log('Cleared AB points');
+            });
+
+            // Video metadata loaded
+            video.addEventListener('loadedmetadata', () => {
+                durationDisplay.textContent = formatTime(video.duration);
+                enableDragging();
+            });
+
+            // Volume control
+            volumeSlider.addEventListener('input', () => {
+                video.volume = volumeSlider.value / 100;
+                updateVolumeIcon();
+            });
+
+            muteBtn.addEventListener('click', () => {
+                video.muted = !video.muted;
+                updateVolumeIcon();
+            });
+
+            const updateVolumeIcon = () => {
+                if (video.muted || video.volume === 0) {
+                    muteBtn.textContent = '🔇';
+                } else if (video.volume < 0.5) {
+                    muteBtn.textContent = '🔉';
+                } else {
+                    muteBtn.textContent = '🔊';
+                }
+            };
+
+            // Playback speed
+            playbackSpeed.addEventListener('change', () => {
+                video.playbackRate = parseFloat(playbackSpeed.value);
+            });
+
+            // Fullscreen
+            fullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    video.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+
+            // Load video
+            loadVideoBtn.addEventListener('click', () => {
+                if (videoUrl.value) {
+                    video.src = videoUrl.value;
+                    video.load();
+                }
+            });
+
+            // Local file handling
+            localFileBtn.addEventListener('click', () => {
+                localFileInput.click();
+            });
+
+            localFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    video.src = url;
+                    video.load();
+                    // Add this line to show the file name in the input
+                    videoUrl.value = url;
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                switch (e.key) {
+                    case ' ':
+                        e.preventDefault();
+                        if (video.paused) video.play();
+                        else video.pause();
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        video.currentTime = Math.max(0, video.currentTime - 5);
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        video.currentTime = Math.min(video.duration, video.currentTime + 5);
+                        break;
+                }
+            });
+
+            // Add these new functions
+            const addToPlaylist = (url) => {
+                if (!url || playlist.includes(url)) return;
+                
+                playlist.push(url);
+                updatePlaylistDisplay();
+            };
+
+            const updatePlaylistDisplay = () => {
+                playlistContainer.innerHTML = '';
+                playlist.forEach((url, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'playlist-item';
+                    item.innerHTML = `
+                        <span class="playlist-number">${index + 1}.</span>
+                        <span class="playlist-url">${url}</span>
+                        <button class="playlist-play-btn">播放</button>
+                        <button class="playlist-remove-btn">删除</button>
+                    `;
+
+                    // Play button handler
+                    item.querySelector('.playlist-play-btn').addEventListener('click', () => {
+                        video.src = url;
+                        video.load();
+                        videoUrl.value = url;
+                    });
+
+                    // Remove button handler
+                    item.querySelector('.playlist-remove-btn').addEventListener('click', () => {
+                        playlist = playlist.filter((_, i) => i !== index);
+                        updatePlaylistDisplay();
+                    });
+
+                    playlistContainer.appendChild(item);
+                });
+            };
+
+            // Add these event listeners
+            addToPlaylistBtn.addEventListener('click', () => {
+                if (videoUrl.value) {
+                    addToPlaylist(videoUrl.value);
+                }
+            });
+
+            clearPlaylistBtn.addEventListener('click', () => {
+                playlist = [];
+                updatePlaylistDisplay();
+            });
+
+            // 添加视频点击播放/暂停功能
+            video.addEventListener('click', () => {
+                if (video.paused) {
+                    video.play()
+                        .then(() => {
+                            updatePlayPauseButton(true);
+                        })
+                        .catch(error => {
+                            console.error('播放失败:', error);
+                        });
+                } else {
+                    video.pause();
+                    updatePlayPauseButton(false);
+                }
+            });
+
+            // 更新 AB 范围显示
+            const updateABRange = () => {
+                if (pointATime !== null && pointBTime !== null && abRange) {
+                    const left = (pointATime / video.duration) * 100;
+                    const right = (pointBTime / video.duration) * 100;
+                    abRange.style.left = `${left}%`;
+                    abRange.style.width = `${right - left}%`;
+                }
+            };
+
+            // Add this to your DOMContentLoaded event listener
+            video.addEventListener('loadeddata', () => {
+                // Enable controls once video is loaded
+                const controls = [
+                    playPauseBtn,
+                    pointABtn,
+                    pointBBtn,
+                    clearABBtn,
+                    abRepeatToggle,
+                    muteBtn,
+                    volumeSlider,
+                    playbackSpeed,
+                    fullscreenBtn
+                ];
+                
+                controls.forEach(control => {
+                    if (control) control.disabled = false;
+                });
+            });
+
+            // Add error handling for video loading
+            video.addEventListener('error', () => {
+                console.error('Video loading error:', video.error);
+                // Disable controls on error
+                const controls = [
+                    playPauseBtn,
+                    pointABtn,
+                    pointBBtn,
+                    clearABBtn,
+                    abRepeatToggle,
+                    muteBtn,
+                    volumeSlider,
+                    playbackSpeed,
+                    fullscreenBtn
+                ];
+                
+                controls.forEach(control => {
+                    if (control) control.disabled = true;
+                });
+            });
+        });
+
+        const enableDragging = () => {
+            const pointA = document.getElementById('pointA');
+            const pointB = document.getElementById('pointB');
+            
+            if (!pointA || !pointB) {
+                console.error('Point markers not found');
+                return;
+            }
+
+            const startDragging = (e, point) => {
+                console.log('Start dragging', point);
+                isDragging = true;
+                currentDraggingPoint = point;
+                document.addEventListener('mousemove', handleDrag);
+                document.addEventListener('mouseup', stopDragging);
+            };
+
+            const handleDrag = (e) => {
+                if (!isDragging || !video.duration) return;
+                
+                const rect = progressBar.getBoundingClientRect();
+                let pos = (e.clientX - rect.left) / rect.width;
+                pos = Math.max(0, Math.min(1, pos));
+                const newTime = pos * video.duration;
+                
+                console.log('Dragging', {
+                    pos,
+                    newTime,
+                    currentDraggingPoint,
+                    videoDuration: video.duration
+                });
+
+                if (currentDraggingPoint === 'A') {
+                    if (newTime < pointBTime || pointBTime === 0) {
+                        pointATime = newTime;
+                        pointA.style.left = `${pos * 100}%`;
+                        updateABPoints();
+                    }
+                } else if (currentDraggingPoint === 'B') {
+                    if (newTime > pointATime) {
+                        pointBTime = newTime;
+                        pointB.style.left = `${pos * 100}%`;
+                        updateABPoints();
+                    }
+                }
+            };
+
+            const stopDragging = () => {
+                console.log('Stop dragging');
+                isDragging = false;
+                currentDraggingPoint = null;
+                document.removeEventListener('mousemove', handleDrag);
+                document.removeEventListener('mouseup', stopDragging);
+            };
+
+            pointA.addEventListener('mousedown', (e) => {
+                console.log('Point A mousedown');
+                e.preventDefault();
+                startDragging(e, 'A');
+            });
+
+            pointB.addEventListener('mousedown', (e) => {
+                console.log('Point B mousedown');
+                e.preventDefault();
+                startDragging(e, 'B');
+            });
+
+            // 初始化点的位置
+            pointA.style.left = '0%';
+            pointB.style.left = '100%';
+            pointA.classList.add('hidden');
+            pointB.classList.add('hidden');
+            pointATime = 0;
+            pointBTime = 0;
+            // 初始化时间显示
+            updateABPoints();
+        };
+
+        // Update the play/pause button state changes
+        const updatePlayPauseButton = (isPlaying) => {
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            if (isPlaying) {
+                playPauseBtn.innerHTML = `
+                    <span class="player-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        </svg>
+                    </span>
+                    <span>暂停</span>
+                `;
+            } else {
+                playPauseBtn.innerHTML = `
+                    <span class="player-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </span>
+                    <span>播放</span>
+                `;
+            }
+        };
+    </script>
+</body>
+</html> 
